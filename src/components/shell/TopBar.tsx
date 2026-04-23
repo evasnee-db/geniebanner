@@ -70,7 +70,9 @@ export function TopBar({
             : <SidebarClosedIcon className="h-4 w-4 text-muted-foreground" />
           }
         </Button>
-        <Link href="/"><DatabricksLogo height={18} /></Link>
+        <Link href="/shell" prefetch={false}>
+          <DatabricksLogo height={18} />
+        </Link>
       </div>
 
       {/* Center: search (hidden on mobile) */}

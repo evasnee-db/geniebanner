@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { AppShell } from "@/components/shell"
+import { Caveat } from "next/font/google"
+import { AppShell, GeniePromoBanner } from "@/components/shell"
 import { HeroSearch } from "@/components/ui/hero-search"
 import { FilterPill } from "@/components/ui/filter-pill"
 import {
@@ -14,6 +15,12 @@ import {
   SparkleDoubleFillIcon,
 } from "@/components/icons"
 import { TrendingUp, Gift } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const postItHandwriting = Caveat({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+})
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,9 +92,111 @@ function ItemTypeIcon({ type }: { type: ItemType }) {
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
+type GenieSpotlight = "idle" | "active" | "dismissed"
+
+const GENIE_SPOTLIGHT_CAPTION =
+  "Banner appears on homepage to improve discoverability of Genie (AKA Databricks One)."
+
+const DISCOVER_NAV_HINT =
+  "Banner can also appear on our Discover page."
+
+type PostItLayout = { top: number; left: number; width: number }
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = React.useState("favorites")
   const [search, setSearch]       = React.useState("")
+  const [genieSpotlight, setGenieSpotlight] = React.useState<GenieSpotlight>("idle")
+  const [postItLayout, setPostItLayout]     = React.useState<PostItLayout | null>(null)
+  const [spotlightHoleRect, setSpotlightHoleRect] = React.useState<DOMRect | null>(null)
+  const [showDiscoverNavHint, setShowDiscoverNavHint] = React.useState(false)
+  const [discoverHintAnchor, setDiscoverHintAnchor] = React.useState<DOMRect | null>(null)
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const bannerRef = React.useRef<HTMLDivElement>(null)
+  const spotlightPrevRef = React.useRef<GenieSpotlight>("idle")
+
+  const updatePostItLayout = React.useCallback(() => {
+    if (genieSpotlight !== "active" || !bannerRef.current) {
+      setPostItLayout(null)
+      setSpotlightHoleRect(null)
+      return
+    }
+    const r = bannerRef.current.getBoundingClientRect()
+    setSpotlightHoleRect(r)
+    const width = Math.min(768, Math.max(280, r.width))
+    setPostItLayout({
+      top: r.bottom + 12,
+      left: r.left + r.width / 2,
+      width,
+    })
+  }, [genieSpotlight])
+
+  React.useLayoutEffect(() => {
+    if (genieSpotlight !== "active") {
+      setPostItLayout(null)
+      setSpotlightHoleRect(null)
+      return
+    }
+    updatePostItLayout()
+  }, [genieSpotlight, updatePostItLayout])
+
+  React.useEffect(() => {
+    if (genieSpotlight !== "active") return
+    const scrollEl = scrollRef.current
+    updatePostItLayout()
+    window.addEventListener("resize", updatePostItLayout)
+    scrollEl?.addEventListener("scroll", updatePostItLayout, { passive: true })
+    return () => {
+      window.removeEventListener("resize", updatePostItLayout)
+      scrollEl?.removeEventListener("scroll", updatePostItLayout)
+    }
+  }, [genieSpotlight, updatePostItLayout])
+
+  React.useEffect(() => {
+    if (spotlightPrevRef.current === "active" && genieSpotlight === "dismissed") {
+      setShowDiscoverNavHint(true)
+    }
+    spotlightPrevRef.current = genieSpotlight
+  }, [genieSpotlight])
+
+  React.useEffect(() => {
+    const onPointerDown = () => {
+      setShowDiscoverNavHint((h) => (h ? false : h))
+      setGenieSpotlight((s) => {
+        if (s === "idle") return "active"
+        if (s === "active") return "dismissed"
+        return s
+      })
+    }
+    window.addEventListener("pointerdown", onPointerDown, true)
+    return () => window.removeEventListener("pointerdown", onPointerDown, true)
+  }, [])
+
+  React.useLayoutEffect(() => {
+    if (!showDiscoverNavHint) {
+      setDiscoverHintAnchor(null)
+      return
+    }
+    const el = document.querySelector<HTMLElement>('[data-nav-id="discover"]')
+    if (!el) {
+      setDiscoverHintAnchor(null)
+      return
+    }
+    const read = () => {
+      const r = el.getBoundingClientRect()
+      if (r.width < 2 || r.height < 2) {
+        setDiscoverHintAnchor(null)
+        return
+      }
+      setDiscoverHintAnchor(r)
+    }
+    read()
+    window.addEventListener("resize", read)
+    window.addEventListener("scroll", read, true)
+    return () => {
+      window.removeEventListener("resize", read)
+      window.removeEventListener("scroll", read, true)
+    }
+  }, [showDiscoverNavHint])
 
   const items = FEED_DATA[activeTab] ?? []
   const filtered = search
@@ -99,13 +208,60 @@ export default function HomePage() {
 
   return (
     <AppShell activeItem="" workspace="pm-ai-bootcamp" userInitial="J">
-      <div className="flex flex-col px-8 pt-12 pb-8 gap-8 overflow-y-auto h-full">
+      <div
+        ref={scrollRef}
+        className="relative flex h-full flex-col gap-6 overflow-y-auto px-8 pb-8 pt-12"
+      >
+        {genieSpotlight === "active" &&
+          spotlightHoleRect &&
+          spotlightHoleRect.width >= 2 &&
+          spotlightHoleRect.height >= 2 && (
+            <div
+              className="pointer-events-none fixed z-[100] rounded-md"
+              style={{
+                top: spotlightHoleRect.top,
+                left: spotlightHoleRect.left,
+                width: spotlightHoleRect.width,
+                height: spotlightHoleRect.height,
+                boxShadow:
+                  "0 0 0 9999px color-mix(in srgb, var(--foreground) 45%, transparent)",
+              }}
+              aria-hidden
+            />
+          )}
 
-        {/* Centered: title + search */}
-        <div className="flex flex-col items-center gap-6">
-          <h1 className="text-2xl font-semibold text-foreground">
-            Welcome to Databricks
-          </h1>
+        <h1 className="relative z-0 text-center text-2xl font-semibold text-foreground">
+          Welcome to Databricks
+        </h1>
+
+        <div ref={bannerRef} className="relative z-20 mx-auto w-full max-w-4xl">
+          <GeniePromoBanner className="max-w-none" />
+        </div>
+
+        {genieSpotlight === "active" && postItLayout && (
+          <div
+            className="fixed z-[200] max-w-[calc(100vw-2rem)] rounded-sm border border-amber-300/90 bg-yellow-200 px-1.5 py-3 shadow-[3px_4px_0_rgba(0,0,0,0.1),0_14px_32px_-10px_rgba(0,0,0,0.2)] dark:border-amber-700/80 dark:bg-amber-950 dark:shadow-[3px_4px_0_rgba(0,0,0,0.35)] sm:px-2"
+            style={{
+              top: postItLayout.top,
+              left: postItLayout.left,
+              width: postItLayout.width,
+              transform: "translateX(-50%)",
+            }}
+            role="note"
+            aria-label="Design annotation"
+          >
+            <p
+              className={cn(
+                postItHandwriting.className,
+                "text-center text-base leading-snug text-neutral-900 dark:text-amber-50 sm:text-lg sm:leading-snug md:text-xl",
+              )}
+            >
+              {GENIE_SPOTLIGHT_CAPTION}
+            </p>
+          </div>
+        )}
+
+        <div className="relative z-0 mx-auto flex w-full max-w-4xl flex-col items-center gap-6">
           <HeroSearch
             className="w-full"
             placeholder="Search data, notebooks, recents, and more..."
@@ -115,7 +271,7 @@ export default function HomePage() {
         </div>
 
         {/* Left-aligned: filter tabs + list */}
-        <div className="flex flex-col gap-4 max-w-[726px] w-full mx-auto">
+        <div className="relative z-0 mx-auto flex w-full max-w-[726px] flex-col gap-4">
 
         {/* Filter tabs */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -174,6 +330,56 @@ export default function HomePage() {
         </div>
 
         </div>{/* end left-aligned */}
+
+        {showDiscoverNavHint && discoverHintAnchor && (
+          <div className="pointer-events-none fixed inset-0 z-[185]">
+            <svg
+              className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-visible"
+              aria-hidden
+            >
+              <defs>
+                <marker
+                  id="discover-hint-arrow"
+                  markerWidth="9"
+                  markerHeight="9"
+                  refX="0"
+                  refY="4.5"
+                  orient="auto"
+                >
+                  <path d="M0,0 L0,9 L9,4.5 z" fill="#000000" />
+                </marker>
+              </defs>
+              <line
+                x1={discoverHintAnchor.right + 220}
+                y1={discoverHintAnchor.top + discoverHintAnchor.height / 2}
+                x2={discoverHintAnchor.right + 2}
+                y2={discoverHintAnchor.top + discoverHintAnchor.height / 2}
+                stroke="#000000"
+                strokeWidth={2.5}
+                markerEnd="url(#discover-hint-arrow)"
+              />
+            </svg>
+            <div
+              className="pointer-events-auto absolute max-w-[min(18rem,calc(100vw-3rem))] rounded-sm border border-amber-300/90 bg-yellow-200 px-4 py-3 shadow-lg dark:border-amber-700/80 dark:bg-amber-950"
+              style={{
+                left: discoverHintAnchor.right + 16,
+                top: discoverHintAnchor.top + discoverHintAnchor.height / 2,
+                transform: "translateY(-50%)",
+              }}
+              role="note"
+              aria-live="polite"
+            >
+              <p
+                className={cn(
+                  postItHandwriting.className,
+                  "text-pretty text-lg leading-snug text-neutral-900 dark:text-amber-50 sm:text-xl",
+                )}
+              >
+                {DISCOVER_NAV_HINT}
+              </p>
+            </div>
+          </div>
+        )}
 
       </div>
     </AppShell>

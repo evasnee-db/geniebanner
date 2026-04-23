@@ -26,6 +26,7 @@ import {
   LayerIcon,
   ModelsIcon,
   PlayCircleIcon,
+  CompassIcon,
 } from "@/components/icons"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -56,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
       { id: "catalog",     label: "Catalog",     icon: CatalogIcon,    href: "/catalog" },
       { id: "workflows",   label: "Workflows",   icon: WorkflowsIcon,  href: "/jobs" },
       { id: "compute",     label: "Compute",     icon: CloudIcon,      href: "/compute" },
+      { id: "discover",    label: "Discover",    icon: CompassIcon,  href: "/discover" },
       { id: "marketplace", label: "Marketplace", icon: StorefrontIcon },
     ],
   },
@@ -221,7 +223,13 @@ function NavItemButton({
 
   if (item.href) {
     return (
-      <Link href={item.href} title={sidebarCollapsed ? item.label : undefined} className={className} onClick={onClick}>
+      <Link
+        href={item.href}
+        title={sidebarCollapsed ? item.label : undefined}
+        className={className}
+        onClick={onClick}
+        data-nav-id={item.id}
+      >
         {content}
       </Link>
     )

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppPasswordGate } from "@/components/AppPasswordGate";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -26,7 +27,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            {children}
+            <AppPasswordGate>{children}</AppPasswordGate>
           </TooltipProvider>
         </ThemeProvider>
       </body>
