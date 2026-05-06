@@ -1,5 +1,6 @@
 import * as React from "react"
 import Link from "next/link"
+import { ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -47,7 +48,16 @@ export function GeniePromoBanner({ className }: { className?: string }) {
             className="h-9 rounded-full border border-[#E8ECF0] bg-white px-5 font-semibold text-[#1B2733] shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:bg-white"
             asChild
           >
-            <Link href="#">Try Genie</Link>
+            <Link
+              href="/shell/try-genie"
+              prefetch={false}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-2"
+            >
+              Try Genie
+              <ExternalLink className="size-3.5 shrink-0 opacity-70" aria-hidden />
+            </Link>
           </Button>
         </div>
       </div>

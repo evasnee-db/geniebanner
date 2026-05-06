@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 type NavGroup = { group: string; items: { id: string; label: string }[] }
 
@@ -111,12 +110,11 @@ export default function DesignSystemLayout({
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
       <aside className="sticky top-0 h-screen w-52 shrink-0 border-r border-border overflow-y-auto py-6 px-4">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center">
           <Link href="/" className="group flex items-center gap-1 text-hint font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
             <span className="opacity-0 group-hover:opacity-100 transition-opacity">←</span>
             Design System
           </Link>
-          <ThemeToggle />
         </div>
         <nav className="flex flex-col gap-0.5">
           <Link

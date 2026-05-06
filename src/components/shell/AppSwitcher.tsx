@@ -4,6 +4,11 @@ import * as React from "react"
 import { AppIcon } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import {
+  APP_SWITCHER_GENIE_ID,
+  type AppSwitcherAskLaunchHandler,
+  useAppSwitcherLaunchRegister,
+} from "@/contexts/AppSwitcherLaunchContext"
 
 // ─── Product icons ────────────────────────────────────────────────────────────
 
@@ -80,8 +85,8 @@ const APPS = [
     Icon: LakehouseIcon,
   },
   {
-    id: "databricks-one",
-    name: "Databricks One",
+    id: APP_SWITCHER_GENIE_ID,
+    name: "Genie",
     desc: "Business insights from data and AI",
     Icon: DatabricksOneIcon,
   },
@@ -103,8 +108,39 @@ const APPS = [
 
 export function AppSwitcher() {
   const [open, setOpen] = React.useState(false)
-  const [activeApp, setActiveApp] = React.useState("lakehouse")
+  const [activeApp, setActiveApp] = React.useState(APP_SWITCHER_GENIE_ID)
+  const [askLaunchHighlightGenie, setAskLaunchHighlightGenie] = React.useState(false)
   const ref = React.useRef<HTMLDivElement>(null)
+  const registerAskLaunch = useAppSwitcherLaunchRegister()
+
+  const [reduceMotion, setReduceMotion] = React.useState(false)
+  React.useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
+    setReduceMotion(mq.matches)
+    const onChange = () => setReduceMotion(mq.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
+
+  React.useEffect(() => {
+    let timeoutId: number | undefined
+    const handler: AppSwitcherAskLaunchHandler = (thenOpenTab) => {
+      setActiveApp(APP_SWITCHER_GENIE_ID)
+      setOpen(true)
+      setAskLaunchHighlightGenie(true)
+      const delay = reduceMotion ? 320 : 880
+      timeoutId = window.setTimeout(() => {
+        thenOpenTab()
+        setOpen(false)
+        setAskLaunchHighlightGenie(false)
+      }, delay)
+    }
+    registerAskLaunch(handler)
+    return () => {
+      if (timeoutId != null) window.clearTimeout(timeoutId)
+      registerAskLaunch(null)
+    }
+  }, [registerAskLaunch, reduceMotion])
 
   React.useEffect(() => {
     if (!open) return
@@ -121,7 +157,13 @@ export function AppSwitcher() {
         variant="ghost"
         size="icon-sm"
         aria-label="App launcher"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() =>
+          setOpen((v) => {
+            const next = !v
+            if (next) setActiveApp(APP_SWITCHER_GENIE_ID)
+            return next
+          })
+        }
       >
         <AppIcon className="h-4 w-4 text-muted-foreground" />
       </Button>
@@ -134,6 +176,8 @@ export function AppSwitcher() {
         >
           {APPS.map((app) => {
             const isActive = activeApp === app.id
+            const genieSpotlight =
+              askLaunchHighlightGenie && app.id === APP_SWITCHER_GENIE_ID
             return (
               <button
                 key={app.id}
@@ -142,7 +186,10 @@ export function AppSwitcher() {
                 className={cn(
                   // Figma: h-50px, px-8px, py-8px, gap-8px, rounded-8px
                   "flex h-[50px] w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors",
-                  isActive ? "bg-[var(--action-default-bg-hover)]" : "hover:bg-[var(--action-default-bg-hover)]"
+                  genieSpotlight && "bg-primary/10 ring-2 ring-primary",
+                  !genieSpotlight && isActive
+                    ? "bg-[var(--action-default-bg-hover)]"
+                    : !genieSpotlight && "hover:bg-[var(--action-default-bg-hover)]",
                 )}
               >
                 {/* Figma: AppIcon 32×32 container, p-4px, rounded-4px */}
